@@ -1,70 +1,136 @@
-%Specify parameters.
-M=130;
-N=100;
+%% Age-Weight Driver
+% This file explores the effects of age-weighting on Barabasi-Albert style
+% network generation. Age functions are considered as follows:
 
-p=(M-N)/N;
-if p<0
-    p=0;
-end
+% PART 1: linear, power-law:  f(age) = 1/age^alpha
+% PART 2: threshold:          f(age) = (1 if age<threshold, 0 if age>threshold)
+% PART 3: normalized Poisson: f(age) = Poisson(age,lambda)./max(long Poisson)
 
-timesteps = N; % This is also the number of nodes.
+%% PART 1: none/linear/power-law age-weighting
+% for a given set of parameters, each of the above will be explored. A
+% distribution will be generated for each parametrization 
 
-%Initialize adjacency matrix at time t = 0.
-A = zeros(1,1);
+%set parameters to be constant across all of part 1:
+N=200;
+M=N; %try round(N*1.25);
 
-%Add a node at each timestep.
-for t = 1:timesteps-1
+%% 1A: linear
+rng(1)
 
-    %Get a list of the degrees of each node (Sum the columns in A).
-    deg = sum(A,1);
-    %Get the age of each node.
-    age = [t:-1:1];
-    
-    %Compute age_weight based on some function. Weight ranges from 0 to 1.
-    age_weight = arrayfun(@(x) 1/x, age);
-    %Compute degree_weight based on some function. Weight ranges from 0 to 1.
-    deg_weight = arrayfun(@(x) x/max(deg),deg);
-    deg_weight(isnan(deg_weight)) = 1;
-    
-    %Compute total weight of each node. Weight ranges from 0 to 1.
-    %There might be a better way to do this.
-    weight = (age_weight + deg_weight)/2;
-    
-    %Choose the node that will gain a neighbor.
-    r = rand*sum(weight);
-    for n = 1:t
-        if sum(weight(1:n)) >= r
-            %Choose node n.
-            break;
+%set parameters
+nreps=5; %SET TO 10+ FOR FULL RUN
+
+linear_nets={};
+for net_idx=1:nreps
+    %Initialize adjacency matrix at time t = 0.
+    A = zeros(1,1);
+
+    %Add a node at each timestep.
+    for t = 1:N-1
+
+        %Get a list of the degrees of each node (Sum the columns in A).
+        deg = sum(A,1);
+        %Get the age of each node.
+        age = [t:-1:1];
+
+        %Compute LINEAR age_weight. Weight ranges from 0 to 1.
+        age_weight = arrayfun(@(x) 1-(x-1)/(N-1), age);
+        %Compute degree_weight, normalized. Weight ranges from 0 to 1.
+        deg_weight = arrayfun(@(x) x/max(deg),deg);
+        deg_weight(isnan(deg_weight)) = 1;
+
+        %Compute total weight of each node. Weight ranges from 0 to 1.
+        weight = (age_weight.*deg_weight);
+
+        %Choose the node that will gain a neighbor.
+        r = rand*sum(weight);
+        for n = 1:t
+            if sum(weight(1:n)) >= r
+                %Chooses node n.
+                break;
+            end
         end
+
+        %Add the node to the adjacency matrix.
+        A(n,size(A,2)+1) = 1;  
+        A(size(A,1)+1,n) = 1;
+
     end
 
-    %Add the node to the adjacency matrix.
-    A(n,size(A,2)+1) = 1;  
-    A(size(A,1)+1,n) = 1;
+    linear_nets{net_idx}=A;
+    G = graph(A);
+    figure
+    plot(G,'layout','force');
+    title('linear')
+end
+
+
+
+
+
+
+%% 1B: constant + power-law
+rng(1)
+
+%set parameters
+nreps=5; %SET TO 10 FOR FULL
+alphas=[0:.5:2]; %SET TO 0:.1:2 FOR FULL RUN
+
+
+powerlaw_nets={};
+
+%loop through each alpha
+for alpha_idx=1:length(alphas)
+    alpha=alphas(alpha_idx);
     
-    if rand()<p
-        [x,y]=find(A==0);
-        if ~isempty(x)
-            idx = datasample(1:length(x),1);
-            
-            % add new edge
-            A(x(idx),y(idx))=1;
-            A(y(idx),x(idx))=1;
+    for net_idx=1:nreps
+        %Initialize adjacency matrix at time t = 0.
+        A = zeros(1,1);
+
+        %Add a node at each timestep.
+        for t = 1:N-1
+
+            %Get a list of the degrees of each node (Sum the columns in A).
+            deg = sum(A,1);
+            %Get the age of each node.
+            age = [t:-1:1];
+
+            %Compute LINEAR age_weight. Weight ranges from 0 to 1.
+            age_weight = arrayfun(@(x) 1/x^(-alpha), age);
+            %Compute degree_weight, normalized. Weight ranges from 0 to 1.
+            deg_weight = arrayfun(@(x) x/max(deg),deg);
+            deg_weight(isnan(deg_weight)) = 1;
+
+            %Compute total weight of each node. Weight ranges from 0 to 1.
+            weight = (age_weight.*deg_weight);
+
+            %Choose the node that will gain a neighbor.
+            r = rand*sum(weight);
+            for n = 1:t
+                if sum(weight(1:n)) >= r
+                    %Chooses node n.
+                    break;
+                end
+            end
+
+            %Add the node to the adjacency matrix.
+            A(n,size(A,2)+1) = 1;  
+            A(size(A,1)+1,n) = 1;
+
         end
+
+        powerlaw_nets{alpha_idx,net_idx}=A;
+        G = graph(A);
+        figure
+        plot(G,'layout','force');
+        title(['Power-law: \alpha=-' num2str(alpha)])
     end
 end
 
-G = graph(A);
 
-disp(G.numnodes)
-disp(G.numedges)
-%
-%MATLAB visualizations aren't that great, this is just for testing.
-deg = sum(A,1);
-age = [t+1:-1:1];
-figure
-plot(G,'layout','force');
+
+
+
 
 %%
 adj2gephilab('toGephi',A);
