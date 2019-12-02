@@ -6,6 +6,12 @@
 % PART 2: threshold:          f(age) = (1 if age<threshold, 0 if age>threshold)
 % PART 3: normalized Poisson: f(age) = Poisson(age,lambda)./max(long Poisson)
 
+%for all networks, the following will be found
+% (i) power-law coeff of degree distribution
+% (ii) mean shortest path
+% (iii) assortativity coefficient
+
+
 %% PART 1: none/linear/power-law age-weighting
 % for a given set of parameters, each of the above will be explored. A
 % distribution will be generated for each parametrization 
@@ -18,7 +24,7 @@ M=N; %try round(N*1.25);
 rng(1)
 
 %set parameters
-nreps=5; %SET TO 10+ FOR FULL RUN
+nreps=1; %SET TO 10+ FOR FULL RUN
 
 linear_nets={};
 for net_idx=1:nreps
@@ -73,7 +79,7 @@ end
 rng(1)
 
 %set parameters
-nreps=5; %SET TO 10 FOR FULL
+nreps=1; %SET TO 10 FOR FULL
 alphas=[0:.5:2]; %SET TO 0:.1:2 FOR FULL RUN
 
 
@@ -120,11 +126,125 @@ for alpha_idx=1:length(alphas)
         end
 
         powerlaw_nets{alpha_idx,net_idx}=A;
-        G = graph(A);
-        figure
-        plot(G,'layout','force');
-        title(['Power-law: \alpha=-' num2str(alpha)])
+% % %         G = graph(A);
+% % %         figure
+% % %         plot(G,'layout','force');
+% % %         title(['Power-law: \alpha=-' num2str(alpha)])
     end
+end
+
+
+
+
+
+%% PART 2: AGE THRESHOLD
+
+%% 2C: threshold
+rng(1)
+
+%set parameters
+nreps=1; %SET TO 10 FOR FULL
+thresholds=[5 25 100 150 200]; %SET TO 0:.1:2 FOR FULL RUN
+
+
+threshold_nets={};
+
+%loop through each alpha
+for thresh_idx=1:length(thresholds)
+    thresh=thresholds(thresh_idx);
+    
+    for net_idx=1:nreps
+        %Initialize adjacency matrix at time t = 0.
+        A = zeros(1,1);
+
+        %Add a node at each timestep.
+        for t = 1:N-1
+
+            %Get a list of the degrees of each node (Sum the columns in A).
+            deg = sum(A,1);
+            %Get the age of each node.
+            age = [t:-1:1];
+
+            %Compute LINEAR age_weight. Weight ranges from 0 to 1.
+            age_weight = arrayfun(@(x) x<=thresh, age);
+            %Compute degree_weight, normalized. Weight ranges from 0 to 1.
+            deg_weight = arrayfun(@(x) x/max(deg),deg);
+            deg_weight(isnan(deg_weight)) = 1;
+
+            %Compute total weight of each node. Weight ranges from 0 to 1.
+            weight = (age_weight.*deg_weight);
+
+            %Choose the node that will gain a neighbor.
+            r = rand*sum(weight);
+            for n = 1:t
+                if sum(weight(1:n)) >= r
+                    %Chooses node n.
+                    break;
+                end
+            end
+
+            %Add the node to the adjacency matrix.
+            A(n,size(A,2)+1) = 1;  
+            A(size(A,1)+1,n) = 1;
+
+        end
+
+        threshold_nets{thresh_idx,net_idx}=A;
+% % %         G = graph(A);
+% % %         figure
+% % %         plot(G,'layout','force');
+% % %         title(['Power-law: t_{threshold}=' num2str(thresh)])
+    end
+end
+
+
+
+
+
+%% PART 3: NORMALIZED POISSON AGING
+%TODO
+%TODO
+%TODO
+
+
+
+
+
+%% PART 4: NETWORK STATISTICS
+%TODO 
+%TODO 
+%TODO 
+
+% FOR ALL NETWORKS:
+%    -find power-law exponent of degree distribution's CCDF
+%    -find average shortest path between all nodes (using distances() func)
+%    -find coefficient of assortativity
+
+% plot these variables as a function of the parameters:
+%    -for power-law f(age), x axis is alpha
+%    -for threshold f(age), x axis is threshold
+%    -for normalized poisson f(age), x axis is lambda
+
+
+
+%% PLOT NETS SO FAR
+
+%plot powerlaw
+figure
+len_a=length(alphas);
+for i=1:len_a
+    subplot(1,len_a,i)
+    plot(graph(powerlaw_nets{i}),'layout','force');
+    title(['Power-law: \alpha=-' num2str(alphas(i))])
+end
+
+%plot threshold
+figure
+len_th=length(thresholds);
+for i=1:len_th
+    subplot(1,len_th,i)
+    plot(graph(threshold_nets{i,1}),'layout','force');
+    title(['Threshold: t=' num2str(thresholds(i))])
 end
 
 
