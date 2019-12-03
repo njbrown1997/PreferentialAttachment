@@ -1,6 +1,6 @@
 %% Age-Weight Driver
-% This file explores the effects of age-weighting on Barabasi-Albert style
-% network generation. Age functions are considered as follows:
+% This file explores the effects of age-weighting on Barabasi-Albert style network 
+% generation. Age functions are considered as follows:
 
 % PART 1: linear, power-law:  f(age) = 1/age^alpha
 % PART 2: threshold:          f(age) = (1 if age<threshold, 0 if age>threshold)
@@ -10,17 +10,15 @@
 % (i) power-law coeff of degree distribution
 % (ii) mean shortest path
 % (iii) assortativity coefficient
-
-
 %% PART 1: none/linear/power-law age-weighting
-% for a given set of parameters, each of the above will be explored. A
-% distribution will be generated for each parametrization 
+% for a given set of parameters, each of the above will be explored. A distribution 
+% will be generated for each parametrization 
 
 %set parameters to be constant across all of part 1:
 N=200;
 M=N; %try round(N*1.25);
-
 %% 1A: linear
+
 rng(1)
 
 %set parameters
@@ -69,13 +67,8 @@ for net_idx=1:nreps
     plot(G,'layout','force');
     title('linear')
 end
-
-
-
-
-
-
 %% 1B: constant + power-law
+
 rng(1)
 
 %set parameters
@@ -132,14 +125,9 @@ for alpha_idx=1:length(alphas)
 % % %         title(['Power-law: \alpha=-' num2str(alpha)])
     end
 end
-
-
-
-
-
 %% PART 2: AGE THRESHOLD
-
 %% 2C: threshold
+
 rng(1)
 
 %set parameters
@@ -196,24 +184,72 @@ for thresh_idx=1:length(thresholds)
 % % %         title(['Power-law: t_{threshold}=' num2str(thresh)])
     end
 end
-
-
-
-
-
 %% PART 3: NORMALIZED POISSON AGING
+
 %TODO
 %TODO
 %TODO
-
-
-
-
-
 %% PART 4: NETWORK STATISTICS
-%TODO 
-%TODO 
-%TODO 
+
+%Power-law statistics.
+for k = 1:nreps
+    for i=1:length(alphas)
+        %Degree Distribution.
+        G = graph(powerlaw_nets{i,1});
+        D = degree(G);
+        degDist = histcounts(D,max(D));
+        X = [];
+        Y = [];
+        for j = 1:size(degDist,2)
+            if not(degDist(j) == 0)
+                X = [X,j];
+                Y = [Y,degDist(j)];
+            end
+        end
+        p = polyfit(log(X),log(Y),1);
+        plExp = p(1);
+        
+        %Average Shortest Path.
+        sPaths = distances(G);
+        avgSPath = mean2(sPaths);
+        
+        %Assortativity Coefficient
+        assort = assortativity(powerlaw_nets{i,k},0);
+        
+        stats = [plExp,avgSPath,assort];
+        powerlaw_stats{i,k} = stats;
+    end
+end
+
+%Threshold statistics.
+for k = 1:nreps
+    for i=1:length(thresholds)
+        %Degree Distribution.
+        G = graph(threshold_nets{i,1});
+        D = degree(G);
+        degDist = histcounts(D,max(D));
+        X = [];
+        Y = [];
+        for j = 1:size(degDist,2)
+            if not(degDist(j) == 0)
+                X = [X,j];
+                Y = [Y,degDist(j)];
+            end
+        end
+        p = polyfit(log(X),log(Y),1);
+        plExp = p(1);
+        
+        %Average Shortest Path.
+        sPaths = distances(G);
+        avgSPath = mean2(sPaths);
+        
+        %Assortativity Coefficient
+        assort = assortativity(threshold_nets{i,k},0);
+        
+        stats = [plExp,avgSPath,assort];
+        threshold_stats{i,k} = stats;
+    end
+end
 
 % FOR ALL NETWORKS:
 %    -find power-law exponent of degree distribution's CCDF
@@ -224,9 +260,6 @@ end
 %    -for power-law f(age), x axis is alpha
 %    -for threshold f(age), x axis is threshold
 %    -for normalized poisson f(age), x axis is lambda
-
-
-
 %% PLOT NETS SO FAR
 
 %plot powerlaw
@@ -234,7 +267,7 @@ figure
 len_a=length(alphas);
 for i=1:len_a
     subplot(1,len_a,i)
-    plot(graph(powerlaw_nets{i}),'layout','force');
+    plot(graph(powerlaw_nets{i,1}),'layout','force');
     title(['Power-law: \alpha=-' num2str(alphas(i))])
 end
 
@@ -246,12 +279,6 @@ for i=1:len_th
     plot(graph(threshold_nets{i,1}),'layout','force');
     title(['Threshold: t=' num2str(thresholds(i))])
 end
-
-
-
-
-
-
 %%
 adj2gephilab('toGephi',A);
 %%
@@ -305,8 +332,8 @@ function EdgeL=adj2gephilab(filename,ADJ,parameters)
     end
      fclose(fidE);
 end
-
 %% Aux function
+
 function EdgeL=conv_EdgeList(adj)
     % convert adj matrix to edge list
     n=size(adj,1); % number of nodes
