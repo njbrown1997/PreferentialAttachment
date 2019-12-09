@@ -1,3 +1,7 @@
+### NOTES DEC 9 MONDAY
+
+Made boxplots of assortativity coefficients (Figure 2)
+
 ### NOTES DEC 8
 Added all age functions for n repetitions, sweeping through parameters
 
