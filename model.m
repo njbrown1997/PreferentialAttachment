@@ -16,17 +16,16 @@
 
 %set parameters to be constant across all of part 1:
 N=200;
-M=N; %try round(N*1.25);
-
+M=N; 
+nreps=20;
 
 
 %% 1A: linear
 %generates linear_nets, containing a set of networks generated with
 % f(age) linearly decreasing w/ age.
-rng(1)
 
 %set parameters
-nreps=20; %SET TO 20+ FOR FULL RUN
+%nreps=20; %SET TO 20+ FOR FULL RUN
 
 tic
 linear_nets={};
@@ -51,10 +50,9 @@ toc
 %generates powerlaw_nets, containing a set of networks generated with
 % f(age) proportional to age^-a, for various a values (0=constant age).
 
-rng(1)
 
 %set parameters
-nreps=20; %SET TO 20+ FOR FULL
+%nreps=20; %SET TO 20+ FOR FULL
 alphas=[0 .5 1 2 4]; 
 
 
@@ -87,10 +85,9 @@ toc
 %% 1C: threshold
 %generates threshold_nets, containing a set of networks generated with
 % f(age) =1, or =0 after a threshold.
-rng(1)
 
 %set parameters
-nreps=20; %SET TO 20+ FOR FULL
+%nreps=20; %SET TO 20+ FOR FULL
 thresholds=[5 25 50 100]; %SET TO 0:10:200 FOR FULL RUN
 
 
@@ -125,10 +122,9 @@ toc
 %   (a) norm_midpoint_nets, containing a set of networks generated with f(age)
 %        proportional to a normal distribution, sweeping through midpoints
 %   (b) norm_width_nets, fixed midpoint but varying widths 
-rng(1)
 
 %set parameters
-nreps=20; %SET TO 20+
+%nreps=20; %SET TO 20+
 
 %for varying midpoint
 midpoint_sweep=0:25:100; 
@@ -191,48 +187,75 @@ toc
 
 %% PART 4: NETWORK STATISTICS
 
-%% 4A: CCDFs by parameter value, for each function
+%% 4A: compute CCDF and assortativity for each network set
 
-%find CCDFs for all networks:
 %...for linear nets
+linear_assort=zeros(size(linear_nets,2),1);
 linear_CCDF=zeros([size(linear_nets,2) N]);
 for i=1:size(linear_nets,2)  
+    linear_assort(i)=assortativity(linear_nets{i},0);
     [f, x] = ccdf(sum(linear_nets{i},2));
     linear_CCDF(i,:)=f;
 end
+
 %...for powerlaw nets
+constant_assort=[];
+powerlaw_assort=[];
+powerlaw_assort_key=[];
 powerlaw_CCDF=zeros([size(powerlaw_nets) N]);
 for i=1:size(powerlaw_nets,2)
     for alpha_i=1:size(powerlaw_nets,1)
+        if alphas(alpha_i)==0
+            constant_assort=[constant_assort assortativity(powerlaw_nets{alpha_i,i},0)];
+        else
+            powerlaw_assort=[powerlaw_assort assortativity(powerlaw_nets{alpha_i,i},0)];
+            powerlaw_assort_key=[powerlaw_assort_key alphas(alpha_i)];
+        end
         [f, x] = ccdf(sum(powerlaw_nets{alpha_i,i},2));
         powerlaw_CCDF(alpha_i,i,:)=f;
     end
 end
+
 %...for threshold nets
+threshold_assort=[];
+threshold_assort_key=[];
 threshold_CCDF=zeros([size(threshold_nets) N]);
 for i=1:size(threshold_nets,2)
     for t_i=1:size(threshold_nets,1)
+        threshold_assort=[threshold_assort assortativity(threshold_nets{t_i,i},0)];
+        threshold_assort_key=[threshold_assort_key alphas(t_i)];
         [f, x] = ccdf(sum(threshold_nets{t_i,i},2));
         threshold_CCDF(t_i,i,:)=f;
     end
 end
+
 %...for midpoint nets
+midpoint_assort=[];
+midpoint_assort_key=[];
 midpoint_CCDF=zeros([size(norm_midpoint_nets) N]);
 for i=1:size(norm_midpoint_nets,2)
     for mid_i=1:size(norm_midpoint_nets,1)
+        midpoint_assort=[midpoint_assort assortativity(norm_midpoint_nets{mid_i,i},0)];
+        midpoint_assort_key=[midpoint_assort_key alphas(mid_i)];
         [f, x] = ccdf(sum(norm_midpoint_nets{mid_i,i},2));
         midpoint_CCDF(mid_i,i,:)=f;
     end
 end
+
 %...for width nets
+width_assort=[];
+width_assort_key=[];
 width_CCDF=zeros([size(norm_width_nets) N]);
 for i=1:size(norm_width_nets,2)
     for std_i=1:size(norm_width_nets,1)
+        width_assort=[width_assort assortativity(norm_width_nets{std_i,i},0)];
+        width_assort_key=[width_assort_key alphas(std_i)];
         [f, x] = ccdf(sum(norm_width_nets{std_i,i},2));
         width_CCDF(std_i,i,:)=f;
     end
 end
 
+%% 4B: Figure 1: CCDFs
 figure
 
 %%% FIG 1a: constant age weight vs linear decrease %%%
@@ -250,7 +273,7 @@ plot(1:N,squeeze(mean(linear_CCDF,1)),...
         set(gca,'xscale','log') 
 hold off
 legend()
-title('f(age) \propto x')
+title('f(age) \propto x','fontsize',18)
 
 
 %%% FIG 1b: constant age weight vs various powerlaw exponents %%%
@@ -272,7 +295,7 @@ for alpha_i=2:size(powerlaw_nets,1)
 end
 legend()
 hold off
-title('f(age) \propto x^{-\alpha}')
+title('f(age) \propto x^{-\alpha}','fontsize',18)
 %
 
 
@@ -295,7 +318,7 @@ for t_i=1:size(threshold_nets,1)
 end
 legend()
 hold off
-title('f(age) = 1 if x\leq threshold, 0 otherwise')
+title('f(age) = 1 if x\leq threshold, 0 otherwise','fontsize',18)
 
 %%% FIG 1d: constant age weight vs various midpoints %%%
 subplot(2,3,4)
@@ -316,7 +339,7 @@ for mid_i=1:size(norm_midpoint_nets,1)
 end
 legend()
 hold off
-title(['f(age) \propto N(\mu,\lambda=' num2str(stdev_fixed) ')'])
+title({['f(age) \propto N(\mu,\lambda=' num2str(stdev_fixed) ')'],'normal dist., variable center'},'fontsize',18)
 
 
 
@@ -339,7 +362,92 @@ for std_i=1:size(norm_width_nets,1)
 end
 legend()
 hold off
-title(['f(age) \propto N(\mu=' num2str(midpoint_fixed) ',\lambda)'])
+title({['f(age) \propto N(\mu=' num2str(midpoint_fixed) ',\lambda)'],'normal dist., variable width'},'fontsize',18)
+
+
+
+
+%% 4B: Figure 2: assortativity by function/parameter
+figure
+
+%linear and constant 
+subplot(1,5,1)
+hold on
+boxplot([constant_assort' linear_assort],...
+    'Labels',{'constant','linear decrease'})
+xlabel('f(age)','fontsize',18)
+ylabel('r_{assortativity}','fontsize',18)
+ylim([-1 0])
+title('Linear','fontsize',18)
+pos = get(gca, 'Position');
+set(gca, 'Position', [pos(1)-.055 .15 pos(3)+.075 .76])
+plot([0 10],[1 1].*mean(constant_assort),'linestyle',':','linewidth',2)
+hold off
+
+%power-law
+subplot(1,5,2)
+hold on
+boxplot(powerlaw_assort,powerlaw_assort_key)
+title('Power-law','fontsize',18)
+xlabel('\alpha','fontsize',18)
+ylim([-1 0])
+pos = get(gca, 'Position');
+set(gca, 'Position', [pos(1) .15 pos(3) .76])
+plot([0 10],[1 1].*mean(constant_assort),'linestyle',':','linewidth',2)
+hold off
+
+%threshold
+subplot(1,5,3)
+hold on
+boxplot(threshold_assort,threshold_assort_key)
+title('Threshold','fontsize',18)
+xlabel('t_{threshold}','fontsize',18)
+ylim([-1 0])
+pos = get(gca, 'Position');
+set(gca, 'Position', [pos(1) .15 pos(3) .76])
+plot([0 10],[1 1].*mean(constant_assort),'linestyle',':','linewidth',2)
+hold off
+
+%normal midpoint
+subplot(1,5,4)
+hold on
+boxplot(midpoint_assort,midpoint_assort_key)
+title('N(\mu,\lambda=20)','fontsize',18)
+xlabel('\mu','fontsize',18)
+ylim([-1 0])
+pos = get(gca, 'Position');
+set(gca, 'Position', [pos(1) .15 pos(3) .76])
+plot([0 10],[1 1].*mean(constant_assort),'linestyle',':','linewidth',2)
+hold off
+
+%normal width
+subplot(1,5,5)
+hold on
+boxplot(width_assort,width_assort_key)
+title('N(\mu=50,\lambda)','fontsize',18)
+xlabel('\lambda','fontsize',18)
+ylim([-1 0])
+pos = get(gca, 'Position');
+set(gca, 'Position', [pos(1) .15 pos(3) .76])
+plot([0 10],[1 1].*mean(constant_assort),'linestyle',':','linewidth',2)
+hold off
+
+
+%% up to here as of Monday Dec 9
+%TODO NEXT: 
+% a. find average shortest paths for each network, 
+% b. diameters
+% c. and possibly more.
+
+% THEN:
+% Plot the above a,b against the parameters of each model (alpha,
+% lambda, etc)
+
+
+
+
+
+
 
 
 %%
@@ -402,22 +510,6 @@ for k = 1:nreps
         threshold_stats{i,k} = stats;
     end
 end
-
-%% up to here as of Sunday Dec 8
-%TODO NEXT: 
-% a. find average shortest paths for each network, 
-% b. diameters
-% c. coefficient of assortativity for each
-% d. and possibly more.
-
-% THEN:
-% Plot the above a,b,c,d against the parameters of each model (alpha,
-% lambda, etc)
-
-
-
-
-
 
 %%
 %scratch code for finding powerlaw slope
